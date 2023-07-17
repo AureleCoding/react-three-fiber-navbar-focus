@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
@@ -10,86 +10,117 @@ import {
 } from "@react-three/drei";
 // import { useControls } from "leva";
 // import { Perf } from "r3f-perf";
-import {
-  EffectComposer,
-  N8AO,
-  TiltShift2,
-  Bloom,
-} from "@react-three/postprocessing";
+import { EffectComposer, N8AO, TiltShift2 } from "@react-three/postprocessing";
 // import { easing } from "maath";
 import TWEEN from "@tweenjs/tween.js";
 
-export default function Hero3D({ hoveredLink }) {
+export default function App() {
+  const [hoveredLink, setHoveredLink] = useState("Home");
+  const [barStyles, setBarStyles] = useState({});
+
+  useEffect(() => {
+    updateBarStyles();
+  }, [hoveredLink]);
+
+  function handleMouseEnter(link) {
+    setHoveredLink(link);
+  }
+
+  function updateBarStyles() {
+    const activeLink = document.querySelector(".navigation .nav-active");
+    if (activeLink) {
+      const { offsetLeft, offsetWidth } = activeLink;
+      setBarStyles({
+        width: offsetWidth - 30,
+        left: offsetLeft + 15,
+      });
+    }
+  }
+
   return (
     <>
-      <Canvas shadows camera={{ position: [0, 0, 0], fov: 50 }}>
-        <color attach="background" args={["#2F2F37"]} />
+      <nav className="navigation">
+        <a
+          className={hoveredLink === "Home" ? "nav-active" : ""}
+          onMouseEnter={() => handleMouseEnter("Home")}
+        >
+          Home
+        </a>
+
+        <a
+          className={hoveredLink === "Projects" ? "nav-active" : ""}
+          onMouseEnter={() => handleMouseEnter("Projects")}
+        >
+          Projects
+        </a>
+
+        <a
+          className={hoveredLink === "About" ? "nav-active" : ""}
+          onMouseEnter={() => handleMouseEnter("About")}
+        >
+          About
+        </a>
+
+        <a
+          className={hoveredLink === "Contact" ? "nav-active" : ""}
+          onMouseEnter={() => handleMouseEnter("Contact")}
+        >
+          Contact
+        </a>
+        <div className="bar" style={barStyles}></div>
+      </nav>
+
+      <Canvas
+        //Uncomment to active rig
+        // eventSource={document.getElementById("root")}
+        // eventPrefix="client"
+        shadows
+        camera={{ position: [0, 0, 0], fov: 50 }}
+      >
+        <color attach="background" args={["#cfcfcf"]} />
 
         <Groups3D link={hoveredLink} />
 
         {/* <CameraControls />
          <axesHelper /> */}
         {/* <Perf position="top-left" /> */}
-
         {/* <Rig /> */}
-
         <EffectComposer disableNormalPass>
           <N8AO aoRadius={1} intensity={2} />
           <TiltShift2 blur={0.2} />
-          <Bloom luminanceThreshold={0} luminanceSmoothing={0.2} height={300} />
         </EffectComposer>
       </Canvas>
     </>
   );
 }
 
-// Moove camera cursor position
-/* 
-function Rig() {
-  useFrame((state, delta) => {
-    const { camera, pointer } = state;
-
-    easing.damp3(
-      camera.position,
-      [
-        Math.sin(-pointer.x / 3) * 2,
-        Math.sin(-pointer.y / 3) * 2,
-        Math.cos(pointer.x / 3) * 5,
-      ],
-      0.2,
-      delta
-    );
-    camera.lookAt(0, 0, 0);
-  });
-} */
-
-export function Groups3D(link) {
-  const objectsGroupRef = useRef(null);
-  let objRota;
+function Groups3D({ link }) {
+  const objectsGroupRef = useRef();
   useFrame(() => {
     TWEEN.update();
   });
 
-  if (objectsGroupRef.current !== null) {
-    function HandleHomeObject(rota) {
+  useEffect(() => {
+    function handleHomeObject(rota) {
       new TWEEN.Tween(objectsGroupRef.current.rotation)
         .to(new THREE.Vector3(0, rota, 0), 1500)
         .easing(TWEEN.Easing.Elastic.Out)
         .start();
     }
 
-    if (link.link === "Home") {
+    let objRota;
+    if (link === "Home") {
       objRota = 0;
-    } else if (link.link === "Projects") {
+    } else if (link === "Projects") {
       objRota = Math.PI / 2;
-    } else if (link.link === "About") {
+    } else if (link === "About") {
       objRota = Math.PI;
-    } else if (link.link === "Contact") {
+    } else if (link === "Contact") {
       objRota = Math.PI / -2;
     }
 
-    HandleHomeObject(objRota);
-  }
+    handleHomeObject(objRota);
+  }, [link]);
 
   return (
     <group ref={objectsGroupRef}>
@@ -121,20 +152,19 @@ export function Groups3D(link) {
   );
 }
 
-export function Object3D(objectInfo) {
-  const { link, objectIndex, position, rotation } = objectInfo;
+function Object3D({ link, objectIndex, position, rotation }) {
   const { nodes } = useGLTF("/3DObjects.glb");
 
   const geom = [
-    nodes.home.geometry,
-    nodes.projects.geometry,
-    nodes.about.geometry,
-    nodes.contact.geometry,
+    nodes.home.geometry.clone(),
+    nodes.projects.geometry.clone(),
+    nodes.about.geometry.clone(),
+    nodes.contact.geometry.clone(),
   ];
 
   return (
     <group position={position} rotation={rotation}>
-      <Float floatIntensity={5}>
+      <Float floatIntensity={2}>
         <mesh geometry={geom[objectIndex]} scale={3} position={[0, 0, 0]}>
           <MeshTransmissionMaterial
             samples={10}
@@ -153,7 +183,7 @@ export function Object3D(objectInfo) {
 function Status({ hoveredLink }) {
   return (
     <group position={[0, 0, -5]}>
-      <Text fontSize={14} color="#fbfefb">
+      <Text fontSize={14} color="black">
         {hoveredLink}
       </Text>
     </group>
